@@ -1,2 +1,10 @@
 .DS_STORE
 .idea
+/experiments
+/imgs
+/src
+/=0.7.5
+/=0.73.1
+/data
+/models
+*__pycache__*

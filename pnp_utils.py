@@ -10,7 +10,7 @@ from PIL import Image
 
 
 # load safety model
-safety_model_id = "CompVis/stable-diffusion-safety-checker"
+safety_model_id = "models/CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
 safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
