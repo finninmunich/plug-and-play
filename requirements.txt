@@ -1,5 +1,5 @@
 albumentations==0.4.3
-diffusers
+diffusers==0.8.1
 opencv-python==4.1.2.30
 pudb==2019.2
 invisible-watermark
@@ -11,7 +11,7 @@ test-tube>=0.7.5
 streamlit>=0.73.1
 einops==0.3.0
 torch-fidelity==0.3.0
-transformers==4.19.2
+transformers==4.25.1
 torchmetrics==0.6.0
 kornia==0.6
 scikit-learn==1.1.1

@@ -1,5 +1,5 @@
 config:
-  experiment_name: "jidu_3"
-  init_img: "data/jidu/driving_scene/3.png"
+  experiment_name: "test-Sunnyday2SnowyDay-v1"
+  init_img: "/home/turing/cfs_cz/finn/codes/DrivingEdition/examples/text_to_image/data/jidu-data-III-sensors/urban-mainroad/sunny-day/00122.jpeg"
   ddim_steps: 999 # we use 999 steps for the best reconstruction
-  save_feature_timesteps: 50
+  save_feature_timesteps: 50 # save 50 features, interval = 1000/50 ==20

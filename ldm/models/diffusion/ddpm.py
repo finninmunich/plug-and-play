@@ -547,7 +547,7 @@ class LatentDiffusion(DDPM):
             z = encoder_posterior
         else:
             raise NotImplementedError(f"encoder_posterior of type '{type(encoder_posterior)}' not yet implemented")
-        return self.scale_factor * z
+        return self.scale_factor * z # scale_factor: 0.18125
 
     def get_learned_conditioning(self, c):
         if self.cond_stage_forward is None:

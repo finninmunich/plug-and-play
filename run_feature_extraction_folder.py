@@ -1,20 +1,21 @@
-import argparse, os
-import torch
+import argparse
+import json
+import logging
 import numpy as np
-from omegaconf import OmegaConf
+import os
+import torch
 from PIL import Image
-from tqdm import tqdm
+from contextlib import nullcontext
 from einops import rearrange
+from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything
 from torch import autocast
-from contextlib import nullcontext
-import json
 from torchvision import transforms
-import logging
-from pnp_utils import check_safety
+from tqdm import tqdm
 
-from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
+from ldm.util import instantiate_from_config
+from pnp_utils import check_safety
 
 
 def load_img(path):
@@ -22,12 +23,12 @@ def load_img(path):
     x, y = image.size
     print(f"loaded input image of size ({x}, {y}) from {path}")
     h = w = 512
-    image = transforms.CenterCrop(min(x,y))(image)
+    #image = transforms.CenterCrop(min(x, y))(image)
     image = image.resize((w, h), resample=Image.Resampling.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
-    return 2.*image - 1.
+    return 2. * image - 1.
 
 
 def load_model_from_config(config, ckpt, verbose=False):
@@ -119,7 +120,18 @@ def main():
         "--check-safety",
         action='store_true',
     )
-
+    parser.add_argument(
+        "--input_folder",
+        type=str,
+        default=None,
+        help="path to input folder",
+    )
+    parser.add_argument(
+        "--num_images",
+        type=int,
+        default=9999999,
+        help="number of images to prcess",
+    )
     opt = parser.parse_args()
     setup_config = OmegaConf.load("./configs/pnp/setup.yaml")
     model_config = OmegaConf.load(f"{opt.model_config}")
@@ -132,9 +144,9 @@ def main():
         exp_config.config.scale = 1.0
 
     seed = exp_config.config.seed
-    seed_everything(seed) # seed everything
+    seed_everything(seed)  # seed everything
 
-    model = load_model_from_config(model_config, f"{opt.ckpt}") # load model
+    model = load_model_from_config(model_config, f"{opt.ckpt}")  # load model
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
@@ -143,7 +155,6 @@ def main():
     save_feature_timesteps = exp_config.config.ddim_steps if exp_config.config.init_img == '' else exp_config.config.save_feature_timesteps
 
     outpath = f"{exp_path_root}/{exp_config.config.experiment_name}"
-
     callback_timesteps_to_save = [save_feature_timesteps]
     if os.path.exists(outpath):
         logging.warning("Experiment directory already exists, previously saved content will be overriden")
@@ -152,13 +163,7 @@ def main():
                 args = json.load(f)
             callback_timesteps_to_save = args["save_feature_timesteps"] + callback_timesteps_to_save
 
-    predicted_samples_path = os.path.join(outpath, "predicted_samples")
-    feature_maps_path = os.path.join(outpath, "feature_maps")
-    sample_path = os.path.join(outpath, "samples")
     os.makedirs(outpath, exist_ok=True)
-    os.makedirs(predicted_samples_path, exist_ok=True)
-    os.makedirs(feature_maps_path, exist_ok=True)
-    os.makedirs(sample_path, exist_ok=True)
 
     # save parse_args in experiment dir
     with open(os.path.join(outpath, "args.json"), "w") as f:
@@ -178,7 +183,7 @@ def main():
 
     def ddim_sampler_callback(pred_x0, xt, i):
         save_feature_maps_callback(i)
-        save_sampled_img(pred_x0, i, predicted_samples_path)
+        #save_sampled_img(pred_x0, i, predicted_samples_path)
 
     def save_feature_maps(blocks, i, feature_type="input_block"):
         block_idx = 0
@@ -188,26 +193,30 @@ def main():
                 continue
             if "ResBlock" in str(type(block[0])):
                 if opt.save_all_features or block_idx == 4:
-                    save_feature_map(block[0].in_layers_features, f"{feature_type}_{block_idx}_in_layers_features_time_{i}")
-                    save_feature_map(block[0].out_layers_features, f"{feature_type}_{block_idx}_out_layers_features_time_{i}")
+                    save_feature_map(block[0].in_layers_features,
+                                     f"{feature_type}_{block_idx}_in_layers_features_time_{i}")
+                    save_feature_map(block[0].out_layers_features,
+                                     f"{feature_type}_{block_idx}_out_layers_features_time_{i}")
             if len(block) > 1 and "SpatialTransformer" in str(type(block[1])):
-                save_feature_map(block[1].transformer_blocks[0].attn1.k, f"{feature_type}_{block_idx}_self_attn_k_time_{i}")
-                save_feature_map(block[1].transformer_blocks[0].attn1.q, f"{feature_type}_{block_idx}_self_attn_q_time_{i}")
+                save_feature_map(block[1].transformer_blocks[0].attn1.k,
+                                 f"{feature_type}_{block_idx}_self_attn_k_time_{i}")
+                save_feature_map(block[1].transformer_blocks[0].attn1.q,
+                                 f"{feature_type}_{block_idx}_self_attn_q_time_{i}")
             block_idx += 1
 
     def save_feature_maps_callback(i):
         if opt.save_all_features:
             save_feature_maps(unet_model.input_blocks, i, "input_block")
-        save_feature_maps(unet_model.output_blocks , i, "output_block")
+        save_feature_maps(unet_model.output_blocks, i, "output_block")
 
     def save_feature_map(feature_map, filename):
         save_path = os.path.join(feature_maps_path, f"{filename}.pt")
         torch.save(feature_map, save_path)
 
     assert exp_config.config.prompt is not None
-    prompts = [exp_config.config.prompt] # it will be ""
+    prompts = [exp_config.config.prompt]  # it will be ""
 
-    precision_scope = autocast if opt.precision=="autocast" else nullcontext
+    precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
         with precision_scope("cuda"):
             with model.ema_scope():
@@ -219,42 +228,65 @@ def main():
                 shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
 
                 z_enc = None
-                if exp_config.config.init_img != '':
-                    assert os.path.isfile(exp_config.config.init_img)
-                    init_image = load_img(exp_config.config.init_img).to(device)
+                # img_file_list = os.listdir(opt.input_folder)
+                # img_file_list = [f for f in img_file_list if not f.endswith(".jsonl")]
+                json_file_path = os.path.join(opt.input_folder, "metadata.jsonl")
+                img_file_list=[]
+                with open(json_file_path, 'r') as file:
+                    for line in file:
+                        data = json.loads(line)
+                        txt = data['text']
+                        if 'sunny-day' in txt:
+                            img_file_list.append(data['file_name'])
+                print(f"we totally have {len(img_file_list)} images in the folder.")
+                if opt.num_images < len(img_file_list):
+                    img_file_list = img_file_list[:opt.num_images]
+                    print(f"we only process {opt.num_images} images.")
+                for image in img_file_list:
+                    image_save_path = os.path.join(outpath, image.split(".")[0])
+                    predicted_samples_path = os.path.join(image_save_path, "predicted_samples")
+                    feature_maps_path = os.path.join(image_save_path, "feature_maps")
+                    sample_path = os.path.join(image_save_path, "samples")
+                    os.makedirs(image_save_path, exist_ok=True)
+                    os.makedirs(predicted_samples_path, exist_ok=True)
+                    os.makedirs(feature_maps_path, exist_ok=True)
+                    os.makedirs(sample_path, exist_ok=True)
+                    image_file_path = os.path.join(opt.input_folder, image)
+                    assert os.path.isfile(image_file_path)
+                    init_image = load_img(image_file_path).to(device)
                     init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
                     # init_latent == z_0
                     ddim_inversion_steps = 999
-                    z_enc, _ = sampler.encode_ddim(init_latent, num_steps=ddim_inversion_steps, conditioning=c,unconditional_conditioning=uc,unconditional_guidance_scale=exp_config.config.scale)
-                else:
-                    z_enc = torch.randn([1, opt.C, opt.H // opt.f, opt.W // opt.f], device=device)
-                torch.save(z_enc, f"{outpath}/z_enc.pt")
-                samples_ddim, _ = sampler.sample(S=exp_config.config.ddim_steps,
-                                conditioning=c,
-                                batch_size=1,
-                                shape=shape,
-                                verbose=False,
-                                unconditional_guidance_scale=exp_config.config.scale,
-                                unconditional_conditioning=uc,
-                                eta=opt.ddim_eta,
-                                x_T=z_enc,
-                                img_callback=ddim_sampler_callback,
-                                callback_ddim_timesteps=save_feature_timesteps,
-                                outpath=outpath)
+                    z_enc, _ = sampler.encode_ddim(init_latent, num_steps=ddim_inversion_steps, conditioning=c,
+                                                   unconditional_conditioning=uc,
+                                                   unconditional_guidance_scale=exp_config.config.scale)
+                    torch.save(z_enc, f"{image_save_path}/z_enc.pt")
+                    samples_ddim, _ = sampler.sample(S=exp_config.config.ddim_steps,
+                                                     conditioning=c,
+                                                     batch_size=1,
+                                                     shape=shape,
+                                                     verbose=False,
+                                                     unconditional_guidance_scale=exp_config.config.scale,
+                                                     unconditional_conditioning=uc,
+                                                     eta=opt.ddim_eta,
+                                                     x_T=z_enc,
+                                                     img_callback=ddim_sampler_callback,
+                                                     callback_ddim_timesteps=save_feature_timesteps,
+                                                     outpath=outpath)
 
-                x_samples_ddim = model.decode_first_stage(samples_ddim)
-                x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
-                if opt.check_safety:
-                    x_samples_ddim = check_safety(x_samples_ddim)
-                x_image_torch = torch.from_numpy(x_samples_ddim).permute(0, 3, 1, 2)
+                    x_samples_ddim = model.decode_first_stage(samples_ddim)
+                    x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                    x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
+                    if opt.check_safety:
+                        x_samples_ddim = check_safety(x_samples_ddim)
+                    x_image_torch = torch.from_numpy(x_samples_ddim).permute(0, 3, 1, 2)
 
-                sample_idx = 0
-                for x_sample in x_image_torch:
-                    x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                    img = Image.fromarray(x_sample.astype(np.uint8))
-                    img.save(os.path.join(sample_path, f"{sample_idx}.png"))
-                    sample_idx += 1
+                    sample_idx = 0
+                    for x_sample in x_image_torch:
+                        x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                        img = Image.fromarray(x_sample.astype(np.uint8))
+                        img.save(os.path.join(sample_path, f"{sample_idx}.png"))
+                        sample_idx += 1
 
     print(f"Sampled images and extracted features saved in: {outpath}")
 
