@@ -156,12 +156,12 @@ def main():
 
     outpath = f"{exp_path_root}/{exp_config.config.experiment_name}"
     callback_timesteps_to_save = [save_feature_timesteps]
-    if os.path.exists(outpath):
-        logging.warning("Experiment directory already exists, previously saved content will be overriden")
-        if exp_config.config.init_img != '':
-            with open(os.path.join(outpath, "args.json"), "r") as f:
-                args = json.load(f)
-            callback_timesteps_to_save = args["save_feature_timesteps"] + callback_timesteps_to_save
+    # if os.path.exists(outpath):
+    #     logging.warning("Experiment directory already exists, previously saved content will be overriden")
+    #     if exp_config.config.init_img != '':
+    #         with open(os.path.join(outpath, "args.json"), "r") as f:
+    #             args = json.load(f)
+    #         callback_timesteps_to_save = args["save_feature_timesteps"] + callback_timesteps_to_save
 
     os.makedirs(outpath, exist_ok=True)
 
@@ -256,7 +256,7 @@ def main():
                     init_image = load_img(image_file_path).to(device)
                     init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))
                     # init_latent == z_0
-                    ddim_inversion_steps = 999
+                    ddim_inversion_steps = exp_config.config.ddim_inversion_steps
                     z_enc, _ = sampler.encode_ddim(init_latent, num_steps=ddim_inversion_steps, conditioning=c,
                                                    unconditional_conditioning=uc,
                                                    unconditional_guidance_scale=exp_config.config.scale)

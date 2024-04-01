@@ -1,4 +1,4 @@
-source_experiment_name: "sunnyday2rainynight-v1" # the experiment name of the source image"
+source_experiment_name: "sunnyday2rainynight-v1-100-ddim" # the experiment name of the source image"
 prompts: # text prompts for translations
   - "This one won't be used normally, as we are using the prompts from the original folder."
 source_weather: "sunny-day"

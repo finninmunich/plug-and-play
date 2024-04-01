@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--f', type=int, default=8, help='downsampling factor')
     parser.add_argument('--model_config', type=str, default='configs/stable-diffusion/v1-inference.yaml',
                         help='model config')
-    parser.add_argument('--ckpt', type=str, default='models/ldm/stable-diffusion-v1/model.ckpt',
+    parser.add_argument('--ckpt', type=str, default='models/ldm/stable-diffusion-v1/jidu_III_sunnyd2snowyn_v2_bs_6_lr_1e6_8000.ckpt',
                         help='model checkpoint')
     parser.add_argument('--precision', type=str, default='autocast', help='choices: ["full", "autocast"]')
     parser.add_argument("--check-safety", action='store_true')

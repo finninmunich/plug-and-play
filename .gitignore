@@ -8,5 +8,5 @@
 /data
 /models
 *__pycache__*
-/test_png
+/test_png/*
 drivingedition_results/
