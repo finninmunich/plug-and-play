@@ -1,0 +1,17 @@
+config:
+  experiment_name: "normal_rain_cam_front_v1-200-ddim"
+  input_folder: "/home/turing/cfs_cz/finn/codes/DrivingEdition/examples/text_to_image/data/nuscenes-data-I/normal_rain_cam_front_v1"
+  ckpt: "models/ldm/stable-diffusion-v1/normal_rain_cam_front_v1.ckpt"
+  ddim_inversion_steps: 200
+  ddim_steps: 200
+  save_feature_timesteps: 100
+  source_weather: "sunny,"
+  target_weather: "rain,"
+
+  scale: 7.5
+  num_ddim_sampling_steps: 100
+  feature_injection_threshold: 80
+
+  negative_prompt: "sunny day;delusion;moon;star"
+  negative_prompt_alpha: 1.0
+  negative_prompt_schedule: "linear"

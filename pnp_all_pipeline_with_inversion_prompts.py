@@ -134,7 +134,7 @@ def main():
     unet_model = model.model.diffusion_model
     save_feature_timesteps = exp_config.config.save_feature_timesteps
     sampler = DDIMSampler(model)
-    outpath = os.path.join(exp_path_root,exp_config.config.experiment_name)
+    outpath = os.path.join(exp_path_root,exp_config.config.experiment_name+'_inversion_prompts')
 
     os.makedirs(outpath, exist_ok=True)
 
@@ -174,7 +174,6 @@ def main():
             save_feature_maps(unet_model.input_blocks, i, "input_block")
         save_feature_maps(unet_model.output_blocks, i, "output_block")
 
-    inversion_prompts = [""]  # it will be ""
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
@@ -184,6 +183,7 @@ def main():
                 # img_file_list = [f for f in img_file_list if not f.endswith(".jsonl")]
                 json_file_path = os.path.join(exp_config.config.input_folder, "metadata.jsonl")
                 img_file_list = []
+                inversion_prompts_list=[]
                 prompts_list = []
                 with open(json_file_path, 'r') as file:
                     for line in file:
@@ -191,15 +191,18 @@ def main():
                         txt = data['text']
                         if exp_config.config.source_weather in txt:
                             img_file_list.append(data['file_name'])
+                            inversion_prompts_list.append(data['text'])
                             prompts_list.append(data['text'].replace(exp_config.config.source_weather,
                                                                      exp_config.config.target_weather))
                 print(f"we totally have {len(img_file_list)} images in the folder.")
                 if opt.num_images < len(img_file_list):
                     img_file_list = img_file_list[:opt.num_images]
                     print(f"we only process {opt.num_images} images.")
-                for image, forward_prompt in zip(img_file_list, prompts_list):
-                    print(f"processing image {image}")
-                    print(f"feature extraction......")
+                for image, inversion_prompts,forward_prompt in zip(img_file_list, inversion_prompts_list,prompts_list):
+                    # print(f"processing image {image}")
+                    # print(f"inversion prompts: {inversion_prompts}")
+                    # print(f"forward prompts: {forward_prompt}")
+                    # print(f"feature extraction......")
                     image_file_path = os.path.join(exp_config.config.input_folder, image)
                     assert os.path.isfile(image_file_path)
                     init_image = load_img(image_file_path).to(device)
@@ -213,6 +216,11 @@ def main():
                     uc = model.get_learned_conditioning([""])
                     if isinstance(inversion_prompts, tuple):
                         inversion_prompts = list(inversion_prompts)
+                    if not isinstance(inversion_prompts, list):
+                        if isinstance(inversion_prompts, str):
+                            inversion_prompts = [inversion_prompts]
+                        else:
+                            inversion_prompts = list(inversion_prompts)
                     c = model.get_learned_conditioning(inversion_prompts)
                     shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
 

@@ -1,12 +1,12 @@
 config:
-  experiment_name: "sunnyday2rainynight-v1-200-ddim"
+  experiment_name: "sunnyday2snowynight-v1-200-ddim"
   input_folder: "/home/turing/cfs_cz/finn/codes/DrivingEdition/examples/text_to_image/data/jidu-data-III-sensors/jidu-III-sunnyday2snowynight-v1/"
-  ckpt: "models/ldm/stable-diffusion-v1/jidu_v9_3000.ckpt"
+  ckpt: "models/ldm/stable-diffusion-v1/jidu_III_sunnyd2snowyn_v1_bs_6_lr_1e6_3000.ckpt"
   ddim_inversion_steps: 200
   ddim_steps: 200
   save_feature_timesteps: 100
   source_weather: "sunny-day"
-  target_weather: "rainy-night"
+  target_weather: "snowy-night"
 
   scale: 7.5
   num_ddim_sampling_steps: 100

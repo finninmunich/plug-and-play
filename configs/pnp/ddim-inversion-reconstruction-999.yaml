@@ -1,0 +1,17 @@
+config:
+  experiment_name: "ddim-reconstruction-999-ddim"
+  input_folder: "/home/turing/cfs_cz/finn/codes/DrivingEdition/examples/text_to_image/data/jidu-data-III-sensors/jidu-III-sunnyday2snowyday-v2/"
+  ckpt: "models/ldm/stable-diffusion-v1/jidu_III_sunnyd2snowyd_v2_bs_6_lr_1e6_6000.ckpt"
+  ddim_inversion_steps: 999
+  ddim_steps: 999
+  save_feature_timesteps: 200
+  source_weather: "sunny-day"
+  target_weather: "sunny-day"
+
+  scale: 7.5
+  num_ddim_sampling_steps: 200
+  feature_injection_threshold: 160
+
+  negative_prompt: ""
+  negative_prompt_alpha: 1.0
+  negative_prompt_schedule: "linear"
